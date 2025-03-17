@@ -30,6 +30,8 @@ import { useRecipe } from "@/hooks/use-recipe"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import Head from 'next/head'
+import { useProductsByRecipe } from "@/hooks/use-products"
+import { useSimilarRecipes } from "@/hooks/use-similar-recipes"
 
 class Fraction {
   constructor(decimal: number) {
@@ -86,6 +88,8 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
   const [servings, setServings] = useState(4)
   const { recipe, ingredients, instructions, comments, loading, error } = useRecipe(params.id)
   const [mainImageUrl, setMainImageUrl] = useState<string | null>(null)
+  const { products, loading: productsLoading } = useProductsByRecipe(params.id)
+  const { similarRecipes, loading: recipesLoading } = useSimilarRecipes(params.id)
 
   // 當食譜數據加載後，初始化主圖片URL
   useEffect(() => {
@@ -438,33 +442,35 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Featured Products</h3>
                 <div className="space-y-4">
-                  <ProductCard
-                    image="/placeholder.svg?height=200&width=200"
-                    name="Professional Pizza Stone"
-                    description="Heavy-duty ceramic stone for perfectly crispy pizza crust"
-                    rating={4.8}
-                    purchases={1234}
-                    price="$39.99"
-                    onAddToCart={() => console.log("Added pizza stone to cart")}
-                  />
-                  <ProductCard
-                    image="/placeholder.svg?height=200&width=200"
-                    name="Italian '00' Pizza Flour"
-                    description="Premium fine-ground flour for authentic Neapolitan pizza"
-                    rating={4.9}
-                    purchases={2156}
-                    price="$12.99"
-                    onAddToCart={() => console.log("Added flour to cart")}
-                  />
-                  <ProductCard
-                    image="/placeholder.svg?height=200&width=200"
-                    name="Pizza Cutter Wheel"
-                    description="Professional stainless steel pizza cutter for clean slices"
-                    rating={4.7}
-                    purchases={876}
-                    price="$14.99"
-                    onAddToCart={() => console.log("Added pizza cutter to cart")}
-                  />
+                  {productsLoading ? (
+                    // 產品載入中的狀態
+                    Array(3).fill(0).map((_, i) => (
+                      <div key={i} className="space-y-2">
+                        <Skeleton className="h-24 w-full rounded-md" />
+                        <Skeleton className="h-4 w-2/3" />
+                        <Skeleton className="h-3 w-full" />
+                      </div>
+                    ))
+                  ) : products.length > 0 ? (
+                    // 顯示從資料庫獲取的產品
+                    products.map((product) => (
+                      <ProductCard
+                        key={product.product_id}
+                        image={product.image_url || "/placeholder.svg?height=200&width=200"}
+                        name={product.name}
+                        description={product.description}
+                        rating={product.rating || 4.0}
+                        purchases={product.purchases || 0}
+                        price={`$${product.price.toFixed(2)}`}
+                        onAddToCart={() => console.log(`Added ${product.name} to cart`)}
+                      />
+                    ))
+                  ) : (
+                    // 沒有產品時顯示的信息
+                    <p className="text-center text-muted-foreground py-4">
+                      No related products found.
+                    </p>
+                  )}
                 </div>
                 <Button variant="outline" className="w-full mt-4">
                   View All Products
@@ -481,24 +487,35 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
               </div>
 
               <div className="space-y-4">
-                <RecipeCard
-                  id="10"
-                  title="Focaccia Bread"
-                  image="/placeholder.svg?height=200&width=300"
-                  description="Italian flatbread with olive oil, herbs and sea salt"
-                  tags={["Italian", "Bread"]}
-                  likes={87}
-                  views={756}
-                />
-                <RecipeCard
-                  id="11"
-                  title="Caprese Salad"
-                  image="/placeholder.svg?height=200&width=300"
-                  description="Fresh tomatoes, mozzarella and basil with balsamic glaze"
-                  tags={["Italian", "Salad"]}
-                  likes={65}
-                  views={543}
-                />
+                {recipesLoading ? (
+                  // 食譜載入中的狀態
+                  Array(2).fill(0).map((_, i) => (
+                    <div key={i} className="space-y-2">
+                      <Skeleton className="aspect-video w-full rounded-md" />
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-full" />
+                    </div>
+                  ))
+                ) : similarRecipes.length > 0 ? (
+                  // 顯示從資料庫獲取的類似食譜
+                  similarRecipes.map((similarRecipe) => (
+                    <RecipeCard
+                      key={similarRecipe.recipe_id}
+                      id={similarRecipe.recipe_id}
+                      title={similarRecipe.title}
+                      image={similarRecipe.image_url || "/placeholder.svg?height=200&width=300"}
+                      description={similarRecipe.description}
+                      tags={similarRecipe.tags || []}
+                      likes={87} // 暫時使用假數據
+                      views={756} // 暫時使用假數據
+                    />
+                  ))
+                ) : (
+                  // 沒有相似食譜時顯示的信息
+                  <p className="text-center text-muted-foreground py-4">
+                    No similar recipes found.
+                  </p>
+                )}
               </div>
             </div>
           </div>

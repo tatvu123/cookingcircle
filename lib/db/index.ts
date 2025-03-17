@@ -31,6 +31,13 @@ export interface Database {
   addToShoppingList: (userId: string, items: any[]) => Promise<void>;
   getShoppingList: (userId: string) => Promise<any[]>;
   removeFromShoppingList: (userId: string, itemId: string) => Promise<void>;
+  
+  // 產品相關方法
+  getProducts: (limit?: number, category?: string) => Promise<any[]>;
+  getProductsByRecipe: (recipeId: string, limit?: number) => Promise<any[]>;
+  
+  // 獲取相似食譜
+  getSimilarRecipes: (recipeId: string, limit?: number) => Promise<any[]>;
 }
 
 // Supabase 實現
@@ -195,6 +202,83 @@ export class SupabaseDatabase implements Database {
       .eq('list_id', itemId);
       
     if (error) throw error;
+  }
+  
+  // 產品相關方法
+  async getProducts(limit = 3, category?: string) {
+    let query = supabaseClient.from('products').select('*');
+    
+    if (category) {
+      query = query.eq('category', category);
+    }
+    
+    const { data, error } = await query
+      .order('purchases', { ascending: false })
+      .limit(limit);
+      
+    if (error) throw error;
+    return data || [];
+  }
+  
+  async getProductsByRecipe(recipeId: string, limit = 3) {
+    // 這裡可以實現通過食譜ID獲取相關產品的邏輯
+    // 如果有 recipe_products 關聯表，可以使用 join 查詢
+    // 暫時直接返回熱門產品
+    return this.getProducts(limit);
+  }
+  
+  // 獲取相似食譜
+  async getSimilarRecipes(recipeId: string, limit = 2) {
+    // 1. 先獲取當前食譜的標籤
+    const { data: currentRecipe, error: recipeError } = await supabaseClient
+      .from('recipes')
+      .select('tags')
+      .eq('recipe_id', recipeId)
+      .single();
+    
+    if (recipeError) throw recipeError;
+    
+    if (!currentRecipe?.tags || !currentRecipe.tags.length) {
+      // 如果當前食譜沒有標籤，返回熱門食譜
+      const { data, error } = await supabaseClient
+        .from('recipes')
+        .select('*')
+        .neq('recipe_id', recipeId)  // 排除當前食譜
+        .order('created_at', { ascending: false })
+        .limit(limit);
+        
+      if (error) throw error;
+      return data || [];
+    }
+    
+    // 2. 根據標籤查找相似食譜
+    // PostgreSQL 可以使用 && 運算符來查找陣列交集
+    const { data, error } = await supabaseClient
+      .from('recipes')
+      .select('*')
+      .neq('recipe_id', recipeId)  // 排除當前食譜
+      .contains('tags', currentRecipe.tags)  // 包含相同標籤的食譜
+      .order('created_at', { ascending: false })
+      .limit(limit);
+      
+    if (error) throw error;
+    
+    // 3. 如果找不到足夠的相似食譜，補充一些最新的食譜
+    if (data.length < limit) {
+      const { data: additionalRecipes, error: addError } = await supabaseClient
+        .from('recipes')
+        .select('*')
+        .neq('recipe_id', recipeId)  // 排除當前食譜
+        .not('recipe_id', 'in', `(${data.map(r => r.recipe_id).join(',')})`)  // 排除已獲取的食譜
+        .order('created_at', { ascending: false })
+        .limit(limit - data.length);
+        
+      if (addError) throw addError;
+      
+      return [...data, ...(additionalRecipes || [])];
+    }
+    
+    return data;
   }
 }
 
