@@ -12,9 +12,9 @@ export function Navigation() {
 
   const navItems = [
     { label: "Explore", href: "#" },
-    { label: "My Recipes", href: "#" },
+    { label: "My Recipes", href: "/profile/poster" },
     { label: "Favorites", href: "#" },
-    { label: "Shop", href: "#" },
+    { label: "Shop", href: "/shopping-list" },
   ]
 
   return (

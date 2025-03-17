@@ -54,7 +54,7 @@ const allergenKeywords = ["Vegan", "Lactose-Free", "Gluten-Free"]
 
 const popularRecipes = [
   {
-    id: "1",
+    id: "f0460d2f-fa26-474a-9cac-90deda8d411a",
     title: "Homemade Margherita Pizza",
     image: "/placeholder.svg?height=300&width=400",
     description: "Classic Italian pizza with fresh mozzarella, tomatoes, and basil",
@@ -258,13 +258,13 @@ function Navigation() {
             <a href="#" className="text-sm font-medium hover:text-zinc-600 transition-colors">
               Explore
             </a>
-            <a href="#" className="text-sm font-medium hover:text-zinc-600 transition-colors">
+            <a href="/profile/poster" className="text-sm font-medium hover:text-zinc-600 transition-colors">
               My Recipes
             </a>
             <a href="#" className="text-sm font-medium hover:text-zinc-600 transition-colors">
               Favorites
             </a>
-            <a href="#" className="text-sm font-medium hover:text-zinc-600 transition-colors">
+            <a href="/shopping-list" className="text-sm font-medium hover:text-zinc-600 transition-colors">
               Shop
             </a>
           </nav>
@@ -307,13 +307,13 @@ function Navigation() {
                   <SheetDescription>Explore more options.</SheetDescription>
                 </SheetHeader>
                 <div className="grid gap-4 py-4">
-                  <a href="#" className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 block">
+                  <a href="/profile/poster" className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 block">
                     My Recipes
                   </a>
                   <a href="#" className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 block">
                     Favorites
                   </a>
-                  <a href="#" className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 block">
+                  <a href="/shopping-list" className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 block">
                     Shop
                   </a>
                 </div>
@@ -341,13 +341,13 @@ function Navigation() {
               </button>
               {isMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-200 z-50">
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <a href="/profile/poster" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                     My Recipes
                   </a>
                   <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                     Favorites
                   </a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                  <a href="/shopping-list" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                     Shop
                   </a>
                 </div>
@@ -488,9 +488,12 @@ export default function Home() {
               </a>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {popularRecipes.map((recipe) => (
-                <RecipeCard key={recipe.id} {...recipe} />
-              ))}
+              {popularRecipes.map((recipe) => {
+                if (recipe.title === "Homemade Margherita Pizza") {
+                  return <RecipeCard key={`recipe-${recipe.id}`} {...recipe} id="f0460d2f-fa26-474a-9cac-90deda8d411a" />
+                }
+                return <RecipeCard key={`recipe-${recipe.id}`} {...recipe} />
+              })}
             </div>
           </section>
 
