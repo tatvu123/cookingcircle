@@ -21,11 +21,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Card, CardContent } from "@/components/ui/card"
 import RecipeCard from "@/components/recipe-card"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Navigation } from "@/components/layout/Navigation"
 import { Footer } from "@/components/layout/Footer"
 import { ProductCard } from "@/components/recipe/ProductCard"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useRecipe } from "@/hooks/use-recipe"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import Head from 'next/head'
 
 class Fraction {
   constructor(decimal: number) {
@@ -54,10 +58,87 @@ class Fraction {
   denominator: number
 }
 
+// 添加這個函數來檢查URL是否是有效的圖片URL（非佔位圖）
+const isValidImageUrl = (url?: string | null) => {
+  if (!url) return false;
+  // 如果URL包含 placeholder.svg 則視為無效
+  if (url.includes('placeholder.svg')) return false;
+  return true;
+};
+
+// 簡化的 RecipeImageGallery 組件（臨時作為占位符）
+const RecipeImageGallery = ({ recipeId, mainImageUrl, onMainImageChange }: {
+  recipeId: string;
+  mainImageUrl?: string;
+  onMainImageChange?: (url: string) => void;
+}) => {
+  return (
+    <div className="space-y-4">
+      <h3 className="text-lg font-semibold">食譜圖片庫</h3>
+      <p className="text-sm text-muted-foreground">
+        請先創建 <code>components/recipe/RecipeImageGallery.tsx</code> 組件
+      </p>
+    </div>
+  );
+};
+
 export default function RecipeDetail({ params }: { params: { id: string } }) {
   const [servings, setServings] = useState(4)
+  const { recipe, ingredients, instructions, comments, loading, error } = useRecipe(params.id)
+  const [mainImageUrl, setMainImageUrl] = useState<string | null>(null)
 
-  const calculateAmount = (baseAmount: string, originalServings = 4) => {
+  // 當食譜數據加載後，初始化主圖片URL
+  useEffect(() => {
+    if (recipe?.image_url) {
+      setMainImageUrl(recipe.image_url)
+    }
+  }, [recipe])
+
+  // 主圖片變更處理
+  const handleMainImageChange = (url: string) => {
+    setMainImageUrl(url)
+  }
+
+  // 如果數據正在加載中
+  if (loading) {
+    return (
+      <>
+        <Navigation />
+        <main className="max-w-[1200px] mx-auto px-4 py-6">
+          <div className="mb-6">
+            <Skeleton className="h-10 w-3/4 mb-2" />
+            <Skeleton className="h-4 w-full mb-4" />
+            <div className="flex gap-2 mb-4">
+              <Skeleton className="h-6 w-20" />
+              <Skeleton className="h-6 w-20" />
+            </div>
+          </div>
+          <Skeleton className="aspect-video w-full rounded-lg mb-8" />
+          {/* 更多加載骨架屏 */}
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  // 如果發生錯誤或找不到食譜
+  if (error || !recipe) {
+    return (
+      <>
+        <Navigation />
+        <main className="max-w-[1200px] mx-auto px-4 py-6">
+          <Alert variant="destructive">
+            <AlertDescription>
+              {error || "找不到食譜"}
+            </AlertDescription>
+          </Alert>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
+  const calculateAmount = (baseAmount: string, originalServings = recipe.servings) => {
     if (!baseAmount) return baseAmount
 
     // Handle fractions
@@ -85,6 +166,16 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
     return formattedAmount
   }
 
+  // 使用這個函數確定顯示哪個圖片URL
+  const getDisplayImageUrl = (): string => {
+    // 如果有有效的 mainImageUrl，使用它
+    if (isValidImageUrl(mainImageUrl)) return mainImageUrl as string;
+    // 如果有有效的 recipe?.image_url，使用它
+    if (isValidImageUrl(recipe?.image_url)) return recipe.image_url;
+    // 都沒有則使用佔位圖
+    return "/placeholder.svg?height=600&width=1200";
+  };
+
   return (
     <>
       <Navigation />
@@ -92,23 +183,32 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
         <div className="grid md:grid-cols-3 gap-8">
           <div className="md:col-span-2">
             <div className="mb-6">
-              <h1 className="text-3xl font-bold mb-2">Homemade Margherita Pizza</h1>
+              <h1 className="text-3xl font-bold mb-2">{recipe.title}</h1>
               <p className="text-muted-foreground mb-4">
-                A classic Italian pizza with fresh mozzarella, tomatoes, and basil on a crispy homemade crust.
+                {recipe.description}
               </p>
               <div className="flex flex-wrap gap-2 mb-4">
-                <Badge>Italian</Badge>
-                <Badge>Vegetarian</Badge>
-                <Badge variant="outline">30 min</Badge>
+                {recipe.tags && recipe.tags.length > 0 ? (
+                  // 如果有標籤數據，顯示它們
+                  recipe.tags.map((tag, index) => (
+                    <Badge key={index}>{tag}</Badge>
+                  ))
+                ) : (
+                  // 如果沒有標籤，顯示烹飪時間
+                  <Badge variant="outline">{recipe.cooking_time} min</Badge>
+                )}
               </div>
               <div className="flex items-center gap-4 mb-6">
-                <Link href="/profile/chef123" className="flex items-center gap-2">
+                <Link href={`/profile/${recipe.user_id}`} className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src="/placeholder.svg" alt="Chef" />
-                    <AvatarFallback>CF</AvatarFallback>
+                    <AvatarImage 
+                      src={recipe.users?.profile_image || "/placeholder.svg"} 
+                      alt={recipe.users?.username || "chef"} 
+                    />
+                    <AvatarFallback>{recipe.users?.username?.charAt(0) || "U"}</AvatarFallback>
                   </Avatar>
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">Chef Mario</span>
+                    <span className="font-medium">{recipe.users?.username || "anonymous"}</span>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -148,8 +248,8 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
 
             <div className="relative aspect-video mb-8 rounded-lg overflow-hidden">
               <Image
-                src="/placeholder.svg?height=600&width=1200"
-                alt="Margherita Pizza"
+                src={getDisplayImageUrl()}
+                alt={recipe?.title || "食譜圖片"}
                 fill
                 className="object-cover"
               />
@@ -226,27 +326,15 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
 
                   {/* Ingredients List */}
                   <ul className="divide-y">
-                    {[
-                      { name: "All-purpose flour", amount: "2 1/4", unit: "cups", additional: "(280g)" },
-                      { name: "Salt", amount: "1", unit: "teaspoon" },
-                      { name: "Instant yeast", amount: "1", unit: "teaspoon" },
-                      { name: "Warm water", amount: "3/4", unit: "cup", additional: "(180ml)" },
-                      { name: "Olive oil", amount: "1", unit: "tablespoon", note: "plus more for brushing" },
-                      { name: "Crushed tomatoes", amount: "1", unit: "can", additional: "(14oz)" },
-                      { name: "Garlic", amount: "2", unit: "cloves", note: "minced" },
-                      { name: "Dried oregano", amount: "1", unit: "teaspoon" },
-                      { name: "Fresh mozzarella cheese", amount: "8", unit: "oz", note: "sliced" },
-                      { name: "Fresh basil leaves", amount: "", unit: "to taste" },
-                      { name: "Salt and pepper", amount: "", unit: "to taste" },
-                    ].map((ingredient, index) => (
+                    {ingredients.map((ingredient, index) => (
                       <li key={index} className="flex items-center justify-between p-3 hover:bg-gray-50">
                         <div className="flex items-center gap-6">
                           <span className="w-48 font-medium">{ingredient.name}</span>
-                          <span className="w-16 text-center">{calculateAmount(ingredient.amount)}</span>
+                          <span className="w-16 text-center">{calculateAmount(ingredient.quantity)}</span>
                           <span className="w-24">{ingredient.unit}</span>
-                          {(ingredient.additional || ingredient.note) && (
+                          {ingredient.notes && (
                             <span className="text-gray-500 text-sm">
-                              {ingredient.additional} {ingredient.note}
+                              {ingredient.notes}
                             </span>
                           )}
                         </div>
@@ -260,7 +348,7 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
                   {/* Footer */}
                   <div className="bg-gray-50 p-3 border-t">
                     <div className="flex items-center justify-between text-sm text-gray-600">
-                      <span>Total Ingredients: 11</span>
+                      <span>Total Ingredients: {ingredients.length}</span>
                       <span>All measurements are Canadian Standard</span>
                     </div>
                   </div>
@@ -269,23 +357,12 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
               <TabsContent value="instructions" className="pt-6">
                 <h2 className="text-xl font-semibold mb-4">Instructions</h2>
                 <ol className="space-y-6">
-                  {[
-                    "In a large bowl, mix flour, salt, and yeast. Add warm water and olive oil, and stir until a dough forms.",
-                    "Knead the dough on a floured surface for about 5 minutes until smooth and elastic. Place in an oiled bowl, cover, and let rise for 1 hour.",
-                    "Preheat your oven to 475°F (245°C) with a pizza stone or baking sheet inside.",
-                    "Mix crushed tomatoes with minced garlic, dried oregano, salt, and pepper to make the sauce.",
-                    "Punch down the dough and roll it out on a floured surface to your desired thickness.",
-                    "Transfer the dough to a piece of parchment paper. Spread the tomato sauce evenly, leaving a border for the crust.",
-                    "Arrange mozzarella slices on top of the sauce.",
-                    "Carefully transfer the pizza with the parchment paper onto the preheated stone or baking sheet.",
-                    "Bake for 12-15 minutes until the crust is golden and the cheese is bubbly.",
-                    "Remove from the oven, top with fresh basil leaves, drizzle with olive oil, and serve hot.",
-                  ].map((step, index) => (
+                  {instructions.map((instruction, index) => (
                     <li key={index} className="flex">
                       <span className="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-medium mr-3">
-                        {index + 1}
+                        {instruction.step_number}
                       </span>
-                      <p>{step}</p>
+                      <p>{instruction.description}</p>
                     </li>
                   ))}
                 </ol>
@@ -295,47 +372,27 @@ export default function RecipeDetail({ params }: { params: { id: string } }) {
             {/* Comments Section */}
             <div className="mb-10">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-semibold">Comments (12)</h2>
+                <h2 className="text-xl font-semibold">Comments ({comments.length})</h2>
                 <Button showCommentDialog>
                   <MessageCircle className="mr-2 h-4 w-4" />
                   Add Comment
                 </Button>
               </div>
               <div className="space-y-6">
-                {[
-                  {
-                    name: "Julia Chen",
-                    avatar: "/placeholder.svg",
-                    date: "2 days ago",
-                    comment:
-                      "I made this last night and it was absolutely delicious! The crust came out perfectly crispy. I added some red pepper flakes for a bit of heat.",
-                  },
-                  {
-                    name: "Mark Johnson",
-                    avatar: "/placeholder.svg",
-                    date: "1 week ago",
-                    comment:
-                      "Great recipe! I substituted the all-purpose flour with 00 flour and it made the crust even better. Will definitely make again.",
-                  },
-                  {
-                    name: "Sarah Williams",
-                    avatar: "/placeholder.svg",
-                    date: "2 weeks ago",
-                    comment:
-                      "My family loved this pizza! It was so much better than takeout. I'm wondering if I can prepare the dough ahead of time and refrigerate it?",
-                  },
-                ].map((comment, index) => (
+                {comments.map((comment, index) => (
                   <div key={index} className="flex gap-4">
                     <Avatar>
-                      <AvatarImage src={comment.avatar} alt={comment.name} />
-                      <AvatarFallback>{comment.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={comment.user?.profile_image || "/placeholder.svg"} alt={comment.user?.username || "用戶"} />
+                      <AvatarFallback>{(comment.user?.username || "U").charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-1">
-                        <h4 className="font-medium">{comment.name}</h4>
-                        <span className="text-xs text-muted-foreground">{comment.date}</span>
+                        <h4 className="font-medium">{comment.user?.username || "Anonymous"}</h4>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </span>
                       </div>
-                      <p className="text-sm">{comment.comment}</p>
+                      <p className="text-sm">{comment.text}</p>
                     </div>
                   </div>
                 ))}
