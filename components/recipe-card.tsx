@@ -28,6 +28,7 @@ interface RecipeCardProps {
   poster?: string
   isOwner?: boolean
   onDelete?: (id: string) => void
+  onCollect?: (id: string, title: string) => void
 }
 
 export default function RecipeCard({
@@ -41,6 +42,7 @@ export default function RecipeCard({
   poster = "Anonymous",
   isOwner = false,
   onDelete,
+  onCollect,
 }: RecipeCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const router = useRouter()
@@ -78,7 +80,7 @@ export default function RecipeCard({
                   className="absolute top-2 right-2 bg-white hover:bg-white/90"
                   onClick={(e) => {
                     e.preventDefault()
-                    // Add collect functionality here
+                    onCollect?.(id, title)
                   }}
                 >
                   <Bookmark className="h-4 w-4" />

@@ -14,10 +14,18 @@ import { Switch } from "@/components/ui/switch"
 // Import the Navigation and Footer components at the top of the file
 import { Navigation } from "@/components/layout/Navigation"
 import { Footer } from "@/components/layout/Footer"
+import { NutritionForm } from "@/components/recipe/NutritionForm"
 
 // Update the component to include Navigation and Footer
 export default function CreateRecipe() {
   const [showNutrition, setShowNutrition] = useState(false)
+  const [recipeId, setRecipeId] = useState<string | null>(null)
+
+  // 在食譜創建成功後設置 recipeId
+  const handleRecipeCreated = (id: string) => {
+    setRecipeId(id)
+  }
+
   return (
     <>
       <Navigation />
@@ -150,32 +158,15 @@ export default function CreateRecipe() {
                       <Switch onCheckedChange={(checked) => setShowNutrition(checked)} />
                     </div>
 
-                    {showNutrition && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="calories">Calories (kcal)</Label>
-                          <Input id="calories" type="number" placeholder="320" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="protein">Protein (g)</Label>
-                          <Input id="protein" type="number" placeholder="12" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="carbs">Carbohydrates (g)</Label>
-                          <Input id="carbs" type="number" placeholder="42" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="fat">Fat (g)</Label>
-                          <Input id="fat" type="number" placeholder="10" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="fiber">Fiber (g)</Label>
-                          <Input id="fiber" type="number" placeholder="2" />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="sugar">Sugar (g)</Label>
-                          <Input id="sugar" type="number" placeholder="5" />
-                        </div>
+                    {showNutrition && recipeId && (
+                      <NutritionForm recipeId={recipeId} />
+                    )}
+                    
+                    {showNutrition && !recipeId && (
+                      <div className="bg-muted p-4 rounded-md text-center">
+                        <p className="text-sm text-muted-foreground">
+                          營養成分資訊可在創建食譜基本信息後編輯
+                        </p>
                       </div>
                     )}
                   </div>

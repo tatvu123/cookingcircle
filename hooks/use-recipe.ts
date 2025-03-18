@@ -17,6 +17,8 @@ export interface Recipe {
     username: string;
     profile_image?: string;
   };
+  likes_count?: number;
+  views_count?: number;
 }
 
 export interface Ingredient {
