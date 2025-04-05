@@ -1,0 +1,112 @@
+@@include('partials/main.html')
+
+<head>
+    @@include("partials/title-meta.html", {"title": "Recipe Database"})
+
+    @@include('partials/head-css.html')
+</head>
+
+<body>
+
+    <div class="wrapper">
+
+        @@include('partials/sidenav.html')
+
+        <!-- Start Page Content here -->
+        <div class="page-content">
+
+            @@include('partials/topbar.html')
+
+            <main>
+                
+                <div class="container py-6">
+
+                @@include("partials/page-title.html", {"subtitle":"Tables","title":"Recipe Database"})
+
+                <div class="grid lg:grid-cols-1 gap-6 mt-8">
+                    <div class="card overflow-hidden">
+                        <div class="card-header">
+                            <h4 class="card-title">Recipes</h4>
+                        </div>
+                        <div>
+                            <div class="overflow-x-auto">
+                                <div class="min-w-full inline-block align-middle">
+                                    <div class="overflow-hidden recipe-table-container">
+                                        <table class="min-w-full divide-y divide-gray-200">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Recipe</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Difficulty</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Cooking Time</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Likes</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Views</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Created</th>
+                                                    <th scope="col" class="px-6 py-3 text-end text-sm text-default-500">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-gray-200">
+                                                <!-- Dynamic content will be inserted here -->
+                                                <tr>
+                                                    <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
+                                                        Loading recipes...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- end card -->
+
+                    <div class="card overflow-hidden">
+                        <div class="card-header">
+                            <h4 class="card-title">Striped Rows Recipe Table</h4>
+                        </div>
+                        <div>
+                            <div class="overflow-x-auto">
+                                <div class="min-w-full inline-block align-middle">
+                                    <div class="overflow-hidden recipe-table-container">
+                                        <table class="min-w-full divide-y divide-gray-200">
+                                            <thead>
+                                                <tr>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Recipe</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Difficulty</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Cooking Time</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Likes</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Views</th>
+                                                    <th scope="col" class="px-6 py-3 text-start text-sm text-default-500">Created</th>
+                                                    <th scope="col" class="px-6 py-3 text-end text-sm text-default-500">Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody data-row-classes="odd:bg-white even:bg-gray-100">
+                                                <!-- Dynamic content will be inserted here -->
+                                                <tr>
+                                                    <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">
+                                                        Loading recipes...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div> <!-- end card -->
+                    
+                </div>
+
+            </div>
+
+            </main>
+
+        </div>
+        <!-- End Page content -->
+
+    </div>
+
+    @@include('partials/footer-scripts.html')
+    
+</body>
+
+</html>

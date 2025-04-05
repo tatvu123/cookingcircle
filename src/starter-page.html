@@ -1,0 +1,39 @@
+@@include('partials/main.html')
+
+<head>
+    @@include("partials/title-meta.html", {"title": "Starter Page"})
+
+    @@include('partials/head-css.html')
+</head>
+
+<body>
+
+    <div class="wrapper">
+
+        @@include('partials/sidenav.html')
+
+        <!-- Start Page Content here -->
+        <div class="page-content">
+
+            @@include('partials/topbar.html')
+
+            <main>
+
+                <div class="container py-6">
+
+                    @@include("partials/page-title.html", {"subtitle":"Menu","title":"Starter Page"})
+
+                </div>
+
+            </main>
+
+        </div>
+        <!-- End Page content -->
+
+    </div>
+
+    @@include('partials/footer-scripts.html')
+
+</body>
+
+</html>

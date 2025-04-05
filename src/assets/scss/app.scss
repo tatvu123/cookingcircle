@@ -1,0 +1,28 @@
+/*
+Template Name: AdminHub - Tailwind CSS 3 Admin Layout & UI Kit Template
+Version: 1.0
+Author: MyraStudio
+File: Main Css File
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+// Components
+@import "custom/reboot";
+@import "custom/helper";
+@import "custom/buttons";
+@import "custom/card";
+@import "custom/forms";
+@import "custom/chart";
+
+// Structure
+@import "structure/general";
+@import "structure/sidenav";
+@import "structure/topbar";
+
+// Advanced Plugins
+@import "custom/simplebar";

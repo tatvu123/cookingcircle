@@ -1,0 +1,26 @@
+//
+// _sidenav.scss
+//
+
+
+.wrapper {
+    @apply flex flex-col min-h-full;
+}
+
+// Page Content
+.page-content {
+    @apply flex flex-col h-screen flex-auto relative transition-all duration-300 lg:p-layout-gap overflow-hidden;
+}
+
+main {
+    @apply flex-grow overflow-y-auto h-full w-full bg-white border border-default-200 my-16 lg:my-0 lg:rounded-xl;
+    // scrollbar-width: thin;
+    // scrollbar-color: rgba(156, 163, 176, 0.5) transparent;
+
+}
+
+
+::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}

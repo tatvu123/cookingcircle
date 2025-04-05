@@ -1,0 +1,31 @@
+//
+// _card.scss
+//
+
+@layer components {
+
+    .card {
+        @apply relative rounded-md bg-white border border-default-200 flex flex-col break-words bg-clip-border h-fit;
+
+
+        .card-header {
+            @apply py-3 px-6 border-b border-gray-200;
+
+            &.card-tabs {
+                @apply pb-0;
+            }
+        }
+
+        .card-footer {
+            @apply py-3 px-6 border-t border-gray-200;
+        }
+
+        .card-body {
+            @apply p-5;
+        }
+    }
+
+    .card-title {
+        @apply text-base font-semibold text-default-800;
+    }
+}
