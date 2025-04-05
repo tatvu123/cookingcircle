@@ -1,4 +1,5 @@
 <!-- Plugin Js (Mandatory in All Pages) -->
+ <script>console.log('Ey!');</script>
 <script src="assets/libs/jquery/jquery.min.js"></script>
 <script src="assets/libs/preline/preline.js"></script>
 <script src="assets/libs/simplebar/simplebar.min.js"></script>
@@ -9,15 +10,20 @@
 <!-- App Js (Mandatory in All Pages) -->
 <script src="assets/js/app.js"></script>
 
-    <!-- Add Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script>
-        // Create a global supabaseClient reference
-        window.supabaseClient = supabase;
-    </script>
-    
-    <!-- Add custom scripts -->
-    <script src="assets/js/supabase-config.js"></script>
-    <script src="assets/js/recipe-service.js"></script>
-    <script src="assets/js/recipe-table-renderer.js"></script>
-    <script src="assets/js/recipe-detail-modal.js"></script>
+<!-- Add Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+    // Create a global supabaseClient reference
+    window.supabaseClient = supabase;
+</script>
+
+<!-- Add custom scripts -->
+<script src="assets/js/supabase-config.js"></script>
+<script src="assets/js/recipe-service.js"></script>
+<script src="assets/js/recipe-detail-modal.js"></script>
+<script src="assets/js/schema-service.js"></script>
+<script src="assets/js/foreign-key-resolver.js"></script>
+<script src="assets/js/config-generator.js"></script>
+<script src="assets/js/table-config.js"></script>
+<script src="assets/js/dynamic-table-renderer.js"></script>
+<script src="assets/js/recipe-table-renderer.js"></script>

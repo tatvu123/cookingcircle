@@ -1,12 +1,9 @@
-// Recipe Table Renderer
-
 document.addEventListener('DOMContentLoaded', async function() {
   console.log('Loading recipe data...');
   await loadRecipeData();
   
-  // Set up event delegation for actions
   document.addEventListener('click', async function(e) {
-    // Handle delete action
+    // delete
     if (e.target && e.target.classList.contains('delete-recipe-btn')) {
       e.preventDefault();
       const recipeId = e.target.dataset.id;
@@ -16,15 +13,6 @@ document.addEventListener('DOMContentLoaded', async function() {
           await loadRecipeData();
         }
       }
-    }
-    
-    // Handle view action
-    if (e.target && e.target.classList.contains('view-recipe-btn')) {
-      e.preventDefault();
-      const recipeId = e.target.dataset.id;
-      await incrementRecipeViews(recipeId);
-      // Open a modal or redirect to recipe detail page
-      alert('Recipe details would be shown in a modal here');
     }
   });
 });
@@ -40,7 +28,7 @@ async function loadRecipeData() {
     const tableBody = container.querySelector('tbody');
     const rowClasses = tableBody.dataset.rowClasses || '';
     
-    // Clear existing content
+    // Clear table body
     tableBody.innerHTML = '';
     
     if (!recipes || recipes.length === 0) {
@@ -109,3 +97,4 @@ async function loadRecipeData() {
     });
   });
 }
+

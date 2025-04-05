@@ -1,15 +1,9 @@
-document.addEventListener('click', async function(e) {
-  if (e.target && e.target.classList.contains('view-recipe-btn')) {
-    e.preventDefault();
-    const recipeId = e.target.dataset.id;
-    await showRecipeDetail(recipeId);
-  }
-});
-
 async function showRecipeDetail(recipeId) {
+  console.log("Show recipe detail called with ID:", recipeId);
   try {
-    // Increment view count
-    await updateRecipeViews(recipeId);
+    document.querySelectorAll('.recipe-detail-modal').forEach(modal => {
+      modal.remove();
+    });
     
     // Fetch recipe details
     const { data: recipe, error } = await supabase

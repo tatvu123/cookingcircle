@@ -1,5 +1,3 @@
-// Recipe Service
-
 async function fetchRecipes() {
   try {
     const { data, error } = await supabase
