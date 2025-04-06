@@ -40,10 +40,10 @@ const tableConfigurations = {
     ],
     actions: [
       { 
-        text: 'View', 
-        class: 'text-primary hover:text-sky-700 mr-3 view-recipe-btn',
-        action: 'view',
-        handler: 'showRecipeDetail'
+        text: 'Edit',
+        class: 'text-primary hover:text-sky-700 mr-3 edit-recipe-btn',
+        action: 'edit',
+        handler: 'editRecipeDetail'
       },
       { 
         text: 'Delete', 
@@ -83,7 +83,7 @@ const tableConfigurations = {
       { key: 'last_login', header: 'Last Login', render: (item) => item.last_login ? new Date(item.last_login).toLocaleString() : 'Never' }
     ],
     actions: [
-      { text: 'View', class: 'text-primary hover:text-sky-700 mr-3', action: 'view', handler: 'showUserDetail' },
+      { text: 'Edit', class: 'text-primary hover:text-sky-700 mr-3', action: 'edit', handler: 'showUserDetail' },
       { text: 'Delete', class: 'text-red-500 hover:text-red-700', action: 'delete', confirmMessage: 'Are you sure you want to delete this user?' }
     ],
     orderBy: { column: 'created_at', ascending: false }

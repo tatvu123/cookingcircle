@@ -1,7 +1,7 @@
 class ConfigGenerator {
   constructor() {
     this.defaultActions = [
-      { text: 'View', class: 'text-primary hover:text-sky-700 mr-3', action: 'view' },
+      { text: 'Edit', class: 'text-primary hover:text-sky-700 mr-3', action: 'edit' },
       { text: 'Delete', class: 'text-red-500 hover:text-red-700', action: 'delete', confirmMessage: 'Are you sure?' }
     ];
     

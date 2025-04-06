@@ -97,3 +97,159 @@ async function showRecipeDetail(recipeId) {
     console.error('Error showing recipe details:', error);
   }
 }
+
+async function editRecipeDetail(recipeId) {
+  console.log("Edit recipe detail called with ID:", recipeId);
+  try {
+    document.querySelectorAll('.recipe-detail-modal').forEach(modal => {
+      modal.remove();
+    });
+    
+    // Fetch recipe details
+    const { data: recipe, error } = await supabase
+      .from('recipes')
+      .select('*')
+      .eq('recipe_id', recipeId)
+      .single();
+    
+    if (error) throw error;
+    
+    // Create modal content with editable form
+    const modal = document.createElement('div');
+    modal.classList.add('fixed', 'inset-0', 'bg-black', 'bg-opacity-50', 'z-50', 'flex', 'items-center', 'justify-center', 'recipe-detail-modal');
+    
+    const modalContent = `
+      <div class="bg-white rounded-lg w-full max-w-3xl mx-4 overflow-hidden">
+        <div class="p-4 bg-gray-50 flex justify-between items-center">
+          <h3 class="text-lg font-medium">Edit Recipe</h3>
+          <button class="close-modal-btn text-gray-400 hover:text-gray-600">
+            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <form id="edit-recipe-form" class="p-6">
+          <input type="hidden" name="recipe_id" value="${recipe.recipe_id}">
+          
+          <div class="mb-4">
+            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input type="text" id="title" name="title" class="w-full rounded-md border border-gray-300 p-2" value="${recipe.title || ''}">
+          </div>
+          
+          <div class="mb-4">
+            <label for="image_url" class="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+            <input type="text" id="image_url" name="image_url" class="w-full rounded-md border border-gray-300 p-2" value="${recipe.image_url || ''}">
+            ${recipe.image_url ? `<img src="${recipe.image_url}" alt="${recipe.title}" class="mt-2 w-full h-32 object-cover rounded-md">` : ''}
+          </div>
+          
+          <div class="mb-4">
+            <label for="tags" class="block text-sm font-medium text-gray-700 mb-1">Tags (comma separated)</label>
+            <input type="text" id="tags" name="tags" class="w-full rounded-md border border-gray-300 p-2" value="${Array.isArray(recipe.tags) ? recipe.tags.join(', ') : ''}">
+          </div>
+          
+          <div class="grid grid-cols-3 gap-4 mb-4">
+            <div>
+              <label for="difficulty" class="block text-sm font-medium text-gray-700 mb-1">Difficulty</label>
+              <select id="difficulty" name="difficulty" class="w-full rounded-md border border-gray-300 p-2">
+                <option value="">Select Difficulty</option>
+                <option value="Easy" ${recipe.difficulty === 'Easy' ? 'selected' : ''}>Easy</option>
+                <option value="Medium" ${recipe.difficulty === 'Medium' ? 'selected' : ''}>Medium</option>
+                <option value="Hard" ${recipe.difficulty === 'Hard' ? 'selected' : ''}>Hard</option>
+              </select>
+            </div>
+            
+            <div>
+              <label for="cooking_time" class="block text-sm font-medium text-gray-700 mb-1">Cooking Time (mins)</label>
+              <input type="number" id="cooking_time" name="cooking_time" class="w-full rounded-md border border-gray-300 p-2" value="${recipe.cooking_time || '0'}">
+            </div>
+            
+            <div>
+              <label for="servings" class="block text-sm font-medium text-gray-700 mb-1">Servings</label>
+              <input type="number" id="servings" name="servings" class="w-full rounded-md border border-gray-300 p-2" value="${recipe.servings || '0'}">
+            </div>
+          </div>
+          
+          <div class="mb-4">
+            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea id="description" name="description" rows="4" class="w-full rounded-md border border-gray-300 p-2">${recipe.description || ''}</textarea>
+          </div>
+          
+          <div class="flex justify-end gap-2 mt-6">
+            <button type="button" class="cancel-btn py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              Cancel
+            </button>
+            <button type="submit" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-700">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+    
+    modal.innerHTML = modalContent;
+    document.body.appendChild(modal);
+    
+    // Close modal on click
+    const closeBtn = modal.querySelector('.close-modal-btn');
+    const cancelBtn = modal.querySelector('.cancel-btn');
+    
+    closeBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+    
+    // Handle form submission
+    const form = modal.querySelector('#edit-recipe-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        const formData = new FormData(form);
+        const updatedRecipe = {
+          title: formData.get('title'),
+          image_url: formData.get('image_url'),
+          tags: formData.get('tags') ? formData.get('tags').split(',').map(tag => tag.trim()).filter(tag => tag) : [],
+          difficulty: formData.get('difficulty'),
+          cooking_time: formData.get('cooking_time') ? parseInt(formData.get('cooking_time')) : 0,
+          servings: formData.get('servings') ? parseInt(formData.get('servings')) : 0,
+          description: formData.get('description')
+        };
+        
+        // Update recipe in Supabase
+        const { error } = await supabase
+          .from('recipes')
+          .update(updatedRecipe)
+          .eq('recipe_id', recipeId);
+        
+        if (error) throw error;
+        
+        // Close modal and refresh the table
+        document.body.removeChild(modal);
+        
+        // Refresh the table data
+        await loadRecipeData();
+        
+        // Show success message
+        alert('Recipe updated successfully!');
+      } catch (error) {
+        console.error('Error updating recipe:', error);
+        alert(`Failed to update recipe: ${error.message}`);
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error showing recipe edit form:', error);
+  }
+}
+
+// Keep the existing showRecipeDetail function for compatibility

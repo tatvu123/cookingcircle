@@ -38,15 +38,16 @@ class DynamicTableRenderer {
     if (this.eventListenersAttached) return;
     this.eventListenersAttached = true;
     
-    // Event delegation for all table actions
     document.addEventListener('click', async (e) => {
+      // If the event has already been handled, skip processing
+      if (e.recipeActionHandled) return;
+      
       // Support both the generic table-action-btn class and specific action classes
       const isActionButton = e.target.classList.contains('table-action-btn') || 
-                            e.target.classList.contains('view-recipe-btn') ||
+                            e.target.classList.contains('edit-recipe-btn') ||
                             e.target.classList.contains('delete-recipe-btn');
       
-      // If it's not an action button or it's already been handled, exit early
-      if (!e.target || !isActionButton || e.recipeActionHandled) return;
+      if (!e.target || !isActionButton) return;
       
       // Mark this event as handled to prevent duplicate processing
       e.recipeActionHandled = true;
@@ -54,9 +55,8 @@ class DynamicTableRenderer {
       
       let action, tableType, itemId;
       
-      // Handle original view-recipe-btn and delete-recipe-btn classes
-      if (e.target.classList.contains('view-recipe-btn')) {
-        action = 'view';
+      if (e.target.classList.contains('edit-recipe-btn')) {
+        action = 'edit';
         itemId = e.target.dataset.id;
         tableType = 'recipes';
       } else if (e.target.classList.contains('delete-recipe-btn')) {
@@ -78,50 +78,70 @@ class DynamicTableRenderer {
         case 'delete':
           const actionConfig = config.actions.find(a => a.action === 'delete');
           if (actionConfig && confirm(actionConfig.confirmMessage || 'Are you sure?')) {
-            await this.deleteItem(config.tableName, config.idField, itemId);
-            // Refresh table
-            const container = e.target.closest('[data-table-type]');
-            if (container) {
-              await this.renderTable(container, config);
+            try {
+              // Show deletion in progress
+              const row = e.target.closest('tr');
+              if (row) {
+                row.style.opacity = '0.5';
+                row.style.transition = 'opacity 0.2s';
+              }
+              
+              // Delete the item from database
+              const success = await this.deleteItem(config.tableName, config.idField, itemId);
+              
+              if (success) {
+                // Show brief success message
+                const notification = document.createElement('div');
+                notification.className = 'fixed inset-x-0 top-4 flex justify-center z-50';
+                notification.innerHTML = `
+                  <div class="bg-green-100 border border-green-500 text-green-700 px-4 py-3 rounded shadow-md">
+                    <div class="flex items-center">
+                      <div class="py-1"><svg class="fill-current h-6 w-6 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM6.7 9.29L9 11.6l4.3-4.3 1.4 1.42L9 14.4l-3.7-3.7 1.4-1.42z"/></svg></div>
+                      <div>
+                        <p class="text-sm">Item deleted successfully. Refreshing page...</p>
+                      </div>
+                    </div>
+                  </div>
+                `;
+                document.body.appendChild(notification);
+              
+                setTimeout(() => {
+                  // Force reload the entire page
+                  window.location.reload();
+                }, 800);
+              } else {
+                // Restore the row if deletion failed
+                if (row) {
+                  row.style.opacity = '1';
+                }
+                alert('Failed to delete the item. Please try again.');
+              }
+            } catch (err) {
+              console.error('Error during deletion:', err);
+              alert('An error occurred while deleting the item.');
             }
           }
           break;
           
-        case 'view':
-          if (tableType === 'recipes') {
-            try {
-              // First increment the view count directly
-              if (typeof incrementRecipeViews === 'function') {
-                await incrementRecipeViews(itemId);
-              }
-              
-              // show the modal
-              if (typeof showRecipeDetail === 'function') {
-                await showRecipeDetail(itemId);
-              } else {
-                console.error('showRecipeDetail function is not available');
-              }
-            } catch (error) {
-              console.error('Error showing recipe detail:', error);
-              alert(`Could not show recipe details. Error: ${error.message}`);
-            }
-          } else {
-            // Fall back to the configured handler for other table types
-            const viewAction = config.actions.find(a => a.action === 'view');
-            if (viewAction && viewAction.handler && typeof window[viewAction.handler] === 'function') {
-              await window[viewAction.handler](itemId);
+        case 'edit':
+          try {
+            // First, try specific table editor (like recipes already has)
+            const editorFunction = `edit${tableType.charAt(0).toUpperCase() + tableType.slice(1).replace(/s$/, '')}Detail`;
+            
+            if (typeof window[editorFunction] === 'function') {
+              // Use table-specific handler if available (like editRecipeDetail)
+              await window[editorFunction](itemId);
             } else {
-              // Last resort fallback - simple alert
-              console.log(`No handler found for viewing ${tableType} item ${itemId}`);
-              const item = await this.fetchItemById(config.tableName, config.idField, itemId);
-              if (item) {
-                alert(`Details for ${tableType} item: ${JSON.stringify(item.title || item.name || item[config.idField], null, 2)}`);
-              }
+              // Use generic editor for other tables
+              await this.showGenericEditModal(config.tableName, config.idField, itemId, config.columns);
             }
+          } catch (error) {
+            console.error(`Error editing ${tableType}:`, error);
+            alert(`Could not edit ${tableType}. Error: ${error.message}`);
           }
           break;
       }
-    }, true);
+    }, true); // Using capture phase to ensure this runs before other handlers
   }
   
   async fetchItems(tableName, orderBy = null) {
@@ -174,35 +194,41 @@ class DynamicTableRenderer {
   
 
   async renderTable(container, config) {
+    // Remove overflow class first to avoid stacking
+    container.classList.remove('overflow-auto');
     container.classList.add('overflow-auto');
-    let table = container.querySelector('table');
-    if (!table) {
-      container.innerHTML = `
-        <div class="table-wrapper">
-          <div class="table-responsive custom-scroll">
-            <table class="min-w-full divide-y divide-gray-200">
-              <thead class="bg-gray-50 sticky top-0 z-10">
-                <tr>
-                  ${config.columns.map(col => 
-                    `<th scope="col" class="px-6 py-3 text-start text-sm text-default-500">${col.header}</th>`
-                  ).join('')}
-                  ${config.actions && config.actions.length ? '<th scope="col" class="px-6 py-3 text-end text-sm text-default-500">Actions</th>' : ''}
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200" ${container.dataset.rowClasses ? `data-row-classes="${container.dataset.rowClasses}"` : ''}>
-                <tr>
-                  <td colspan="${config.columns.length + (config.actions && config.actions.length ? 1 : 0)}" class="px-6 py-4 text-center text-sm text-gray-500">
-                    Loading data...
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-      table = container.querySelector('table');
+    
+    // IMPORTANT: Completely remove all child elements first
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
     }
     
+    // Now rebuild the table structure completely
+    container.innerHTML = `
+      <div class="table-wrapper">
+        <div class="table-responsive custom-scroll">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50 sticky top-0 z-10">
+              <tr>
+                ${config.columns.map(col => 
+                  `<th scope="col" class="px-6 py-3 text-start text-sm text-default-500 min-w-[120px]">${col.header}</th>`
+                ).join('')}
+                ${config.actions && config.actions.length ? '<th scope="col" class="px-6 py-3 text-end text-sm text-default-500 min-w-[100px]">Actions</th>' : ''}
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200" ${container.dataset.rowClasses ? `data-row-classes="${container.dataset.rowClasses}"` : ''}>
+              <tr>
+                <td colspan="${config.columns.length + (config.actions && config.actions.length ? 1 : 0)}" class="px-6 py-4 text-center text-sm text-gray-500">
+                  Loading data...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    `;
+    
+    const table = container.querySelector('table');
     const tableWrapper = container.querySelector('.table-wrapper');
     const tableResponsive = container.querySelector('.table-responsive');
     const tableBody = table.querySelector('tbody');
@@ -225,9 +251,7 @@ class DynamicTableRenderer {
       return;
     }
 
-    // The rest of your code for rendering rows...
-    
-    // Add fixed height with vertical scrolling for tables with more than 5 rows
+    // Scrolling configuration should come before any async operations
     if (items.length > 5) {
       tableResponsive.style.maxHeight = '400px';
       tableResponsive.style.overflowY = 'auto';
@@ -314,6 +338,200 @@ class DynamicTableRenderer {
       row.innerHTML = innerHTML;
       tableBody.appendChild(row);
     });
+  }
+
+  async showGenericEditModal(tableName, idField, itemId, columns) {
+    try {
+      // Remove any existing modals
+      document.querySelectorAll('.generic-edit-modal').forEach(modal => {
+        modal.remove();
+      });
+      
+      // Fetch item details
+      const item = await this.fetchItemById(tableName, idField, itemId);
+      if (!item) throw new Error(`Could not find ${tableName} with ${idField}=${itemId}`);
+      
+      // Create modal container
+      const modal = document.createElement('div');
+      modal.classList.add('fixed', 'inset-0', 'bg-black', 'bg-opacity-50', 'z-50', 'flex', 'items-center', 'justify-center', 'generic-edit-modal');
+      
+      // Build form fields based on columns configuration
+      let formFields = '';
+      
+      columns.forEach(column => {
+        // Skip primary key field from being editable
+        if (column.key === idField) return;
+        
+        const value = item[column.key] !== undefined && item[column.key] !== null ? item[column.key] : '';
+        
+        // Handle different column types appropriately
+        if (typeof value === 'boolean') {
+          // Checkbox for boolean values
+          formFields += `
+            <div class="mb-4">
+              <label class="inline-flex items-center">
+                <input type="checkbox" name="${column.key}" class="rounded border-gray-300" ${value ? 'checked' : ''}>
+                <span class="ml-2 text-sm font-medium text-gray-700">${column.header}</span>
+              </label>
+            </div>
+          `;
+        } else if (typeof value === 'number') {
+          // Number input
+          formFields += `
+            <div class="mb-4">
+              <label for="${column.key}" class="block text-sm font-medium text-gray-700 mb-1">${column.header}</label>
+              <input type="number" id="${column.key}" name="${column.key}" class="w-full rounded-md border border-gray-300 p-2" value="${value}">
+            </div>
+          `;
+        } else if (Array.isArray(value)) {
+          // Handle arrays (like tags) with comma-separated input
+          formFields += `
+            <div class="mb-4">
+              <label for="${column.key}" class="block text-sm font-medium text-gray-700 mb-1">${column.header} (comma separated)</label>
+              <input type="text" id="${column.key}" name="${column.key}" class="w-full rounded-md border border-gray-300 p-2" value="${value.join(', ')}">
+            </div>
+          `;
+        } else if (typeof value === 'string' && value.length > 100) {
+          // Textarea for long text
+          formFields += `
+            <div class="mb-4">
+              <label for="${column.key}" class="block text-sm font-medium text-gray-700 mb-1">${column.header}</label>
+              <textarea id="${column.key}" name="${column.key}" rows="4" class="w-full rounded-md border border-gray-300 p-2">${value}</textarea>
+            </div>
+          `;
+        } else {
+          // Default to text input
+          formFields += `
+            <div class="mb-4">
+              <label for="${column.key}" class="block text-sm font-medium text-gray-700 mb-1">${column.header}</label>
+              <input type="text" id="${column.key}" name="${column.key}" class="w-full rounded-md border border-gray-300 p-2" value="${value !== null ? value : ''}">
+            </div>
+          `;
+        }
+      });
+      
+      // Create modal content with scrolling support
+      const modalContent = `
+        <div class="bg-white rounded-lg w-full max-w-3xl mx-4 flex flex-col max-h-[90vh]">
+          <div class="p-4 bg-gray-50 flex justify-between items-center sticky top-0 z-10 border-b border-gray-200">
+            <h3 class="text-lg font-medium">Edit ${tableName.charAt(0).toUpperCase() + tableName.slice(1).replace(/s$/, '')}</h3>
+            <button class="close-modal-btn text-gray-400 hover:text-gray-600">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="overflow-y-auto custom-scroll flex-grow">
+            <form id="edit-form" class="p-6">
+              <input type="hidden" name="${idField}" value="${item[idField]}">
+              
+              ${formFields}
+            </form>
+          </div>
+          <div class="p-4 bg-gray-50 flex justify-end gap-2 border-t border-gray-200 sticky bottom-0">
+            <button type="button" class="cancel-btn py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              Cancel
+            </button>
+            <button type="submit" id="save-changes-btn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-700">
+              Save Changes
+            </button>
+          </div>
+        </div>
+      `;
+      
+      modal.innerHTML = modalContent;
+      document.body.appendChild(modal);
+      
+      // Add event listeners for closing modal
+      const closeBtn = modal.querySelector('.close-modal-btn');
+      const cancelBtn = modal.querySelector('.cancel-btn');
+      const form = modal.querySelector('#edit-form');
+      const saveBtn = modal.querySelector('#save-changes-btn');
+      
+      closeBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+      
+      cancelBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+      
+      // Close modal when clicking outside
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+        }
+      });
+      
+      // Connect save button to form submission
+      saveBtn.addEventListener('click', () => {
+        form.dispatchEvent(new Event('submit'));
+      });
+      
+      // Handle form submission
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        try {
+          const formData = new FormData(form);
+          const updatedItem = {};
+          
+          // Process form data
+          columns.forEach(column => {
+            if (column.key === idField) return; // Skip ID field
+            
+            let value = formData.get(column.key);
+            
+            // Handle different data types
+            if (typeof item[column.key] === 'boolean') {
+              value = !!formData.get(column.key); // Convert to boolean
+            } else if (typeof item[column.key] === 'number') {
+              value = value ? Number(value) : 0;
+            } else if (Array.isArray(item[column.key])) {
+              value = value ? value.split(',').map(item => item.trim()).filter(item => item) : [];
+            }
+            
+            updatedItem[column.key] = value;
+          });
+          
+          // Update item in database
+          const { error } = await supabase
+            .from(tableName)
+            .update(updatedItem)
+            .eq(idField, itemId);
+          
+          if (error) throw error;
+          
+          // Close modal
+          document.body.removeChild(modal);
+          
+          // Show success message
+          const notification = document.createElement('div');
+          notification.className = 'fixed bottom-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50 notification-toast';
+          notification.innerHTML = `
+            <div class="flex items-center">
+              <div class="py-1"><svg class="fill-current h-6 w-6 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM6.7 9.29L9 11.6l4.3-4.3 1.4 1.42L9 14.4l-3.7-3.7 1.4-1.42z"/></svg></div>
+              <div>
+                <p class="text-sm">Item updated successfully!</p>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(notification);
+          
+          setTimeout(() => {
+            notification.remove();
+            // Refresh page to update data
+            window.location.reload();
+          }, 1500);
+        } catch (error) {
+          console.error('Error updating item:', error);
+          alert(`Failed to update item: ${error.message}`);
+        }
+      });
+    } catch (error) {
+      console.error('Error showing edit modal:', error);
+      alert(`Could not display edit form: ${error.message}`);
+    }
   }
 }
 
