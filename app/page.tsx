@@ -354,7 +354,7 @@ const handleSearch = (query: string) => {
           <section>
             <div className="flex items-center justify-between mb-4 md:mb-6">
               <h2 className="text-xl md:text-2xl font-semibold tracking-tight">Popular Recipes</h2>
-              <a href="#" className="text-sm font-medium text-black hover:underline">
+              <a href="/view_all/popRecipes" className="text-sm font-medium text-black hover:underline">
                 View all
               </a>
             </div>
@@ -377,7 +377,7 @@ const handleSearch = (query: string) => {
           <section>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-semibold tracking-tight">Trending Now</h2>
-              <a href="#" className="text-sm font-medium text-black hover:underline">
+              <a href="/view_all/trendRecipes" className="text-sm font-medium text-black hover:underline">
                 View all
               </a>
             </div>
@@ -405,7 +405,7 @@ const handleSearch = (query: string) => {
             <div className="mb-12">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold tracking-tight">Ingredients</h3>
-                <a href="#" className="text-sm font-medium text-black hover:underline">
+                <a href="/view_all/ingredients" className="text-sm font-medium text-black hover:underline">
                   View all
                 </a>
               </div>
@@ -429,7 +429,7 @@ const handleSearch = (query: string) => {
             <div className="mb-12">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold tracking-tight">Kitchenware</h3>
-                <a href="#" className="text-sm font-medium text-black hover:underline">
+                <a href="/view_all/kitchenware" className="text-sm font-medium text-black hover:underline">
                   View all
                 </a>
               </div>
