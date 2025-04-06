@@ -412,7 +412,7 @@ class DynamicTableRenderer {
       
       // Create modal content with scrolling support
       const modalContent = `
-        <div class="bg-white rounded-lg w-full max-w-3xl mx-4 flex flex-col max-h-[90vh]">
+        <div class="bg-white rounded-lg w-full max-w-3xl mx-4 flex flex-col h-[90vh]">
           <div class="p-4 bg-gray-50 flex justify-between items-center sticky top-0 z-10 border-b border-gray-200">
             <h3 class="text-lg font-medium">Edit ${tableName.charAt(0).toUpperCase() + tableName.slice(1).replace(/s$/, '')}</h3>
             <button class="close-modal-btn text-gray-400 hover:text-gray-600">
@@ -421,10 +421,10 @@ class DynamicTableRenderer {
               </svg>
             </button>
           </div>
-          <div class="overflow-y-auto custom-scroll flex-grow">
+          <div class="overflow-y-auto custom-scroll flex-1 min-h-0">
             <form id="edit-form" class="p-6">
               <input type="hidden" name="${idField}" value="${item[idField]}">
-              
+            
               ${formFields}
             </form>
           </div>

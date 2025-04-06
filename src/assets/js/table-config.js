@@ -25,28 +25,28 @@ const tableConfigurations = {
         }
       },
       { key: 'difficulty', header: 'Difficulty', fallback: 'N/A' },
-      { 
-        key: 'cooking_time', 
+      {
+        key: 'cooking_time',
         header: 'Cooking Time',
         render: (item) => item.cooking_time ? `${item.cooking_time} mins` : 'N/A'
       },
       { key: 'likes_count', header: 'Likes', fallback: 0 },
       { key: 'views_count', header: 'Views', fallback: 0 },
-      { 
-        key: 'created_at', 
-        header: 'Created', 
+      {
+        key: 'created_at',
+        header: 'Created',
         render: (item) => item.created_at ? new Date(item.created_at).toLocaleDateString() : ''
       }
     ],
     actions: [
-      { 
+      {
         text: 'Edit',
         class: 'text-primary hover:text-sky-700 mr-3 edit-recipe-btn',
         action: 'edit',
         handler: 'editRecipeDetail'
       },
-      { 
-        text: 'Delete', 
+      {
+        text: 'Delete',
         class: 'text-red-500 hover:text-red-700 delete-recipe-btn',
         action: 'delete',
         confirmMessage: 'Are you sure you want to delete this recipe?'
@@ -54,39 +54,69 @@ const tableConfigurations = {
     ],
     orderBy: { column: 'created_at', ascending: false }
   },
-  
-  users: {
-    tableName: 'users',
-    idField: 'user_id',
-    title: 'Users',
+
+  products: {
+    tableName: 'products',
+    idField: 'product_id',
+    title: 'Products',
     columns: [
       {
-        key: 'avatar_url',
-        header: 'User',
+        key: 'name',
+        header: 'Product',
         render: (item) => {
           return `
             <div class="flex items-center">
-              ${item.avatar_url ? `
+              ${item.image_url ? `
                 <div class="flex-shrink-0 h-10 w-10 mr-3">
-                  <img class="h-10 w-10 rounded-full object-cover" src="${item.avatar_url}" alt="">
+                  <img class="h-10 w-10 rounded-md object-cover" src="${item.image_url}" alt="">
                 </div>
               ` : ''}
               <div>
-                ${item.full_name || item.email || 'Unknown User'}
-                ${item.email ? `<p class="text-xs text-gray-500">${item.email}</p>` : ''}
+                ${item.name || 'Untitled Product'}
+                ${item.category ? `<p class="text-xs text-gray-500">${item.category}</p>` : ''}
               </div>
             </div>
           `;
         }
       },
-      { key: 'role', header: 'Role', fallback: 'User' },
-      { key: 'last_login', header: 'Last Login', render: (item) => item.last_login ? new Date(item.last_login).toLocaleString() : 'Never' }
+      {
+        key: 'price',
+        header: 'Price',
+        render: (item) => item.price ? `$${parseFloat(item.price).toFixed(2)}` : '$0.00'
+      },
+      {
+        key: 'rating',
+        header: 'Rating',
+        render: (item) => item.rating ? `${item.rating.toFixed(1)}/5` : 'N/A'
+      },
+      {
+        key: 'in_stock',
+        header: 'Stock',
+        render: (item) => item.in_stock ? 
+          '<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">In Stock</span>' : 
+          '<span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">Out of Stock</span>'
+      },
+      { key: 'purchases', header: 'Purchases', fallback: 0 },
+      {
+        key: 'created_at',
+        header: 'Added',
+        render: (item) => item.created_at ? new Date(item.created_at).toLocaleDateString() : ''
+      }
     ],
     actions: [
-      { text: 'Edit', class: 'text-primary hover:text-sky-700 mr-3', action: 'edit', handler: 'showUserDetail' },
-      { text: 'Delete', class: 'text-red-500 hover:text-red-700', action: 'delete', confirmMessage: 'Are you sure you want to delete this user?' }
+      {
+        text: 'Edit',
+        class: 'text-primary hover:text-sky-700 mr-3',
+        action: 'edit',
+        handler: 'editProductDetail'  // This tells the system to use our custom handler
+      },
+      {
+        text: 'Delete',
+        class: 'text-red-500 hover:text-red-700',
+        action: 'delete',
+        confirmMessage: 'Are you sure you want to delete this product?'
+      }
     ],
     orderBy: { column: 'created_at', ascending: false }
   }
-  
 };
