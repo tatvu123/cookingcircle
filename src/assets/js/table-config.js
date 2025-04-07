@@ -108,7 +108,7 @@ const tableConfigurations = {
         text: 'Edit',
         class: 'text-primary hover:text-sky-700 mr-3',
         action: 'edit',
-        handler: 'editProductDetail'  // This tells the system to use our custom handler
+        handler: 'editProductDetail'
       },
       {
         text: 'Delete',
@@ -118,5 +118,49 @@ const tableConfigurations = {
       }
     ],
     orderBy: { column: 'created_at', ascending: false }
+  },
+
+  instructions: {
+    tableName: 'instructions',
+    idField: 'instruction_id',
+    title: 'Instructions',
+    columns: [
+      {
+        key: 'recipe_id',
+        header: 'Recipe',
+        render: async (item) => {
+          try {
+            const { data, error } = await supabase
+              .from('recipes')
+              .select('title')
+              .eq('recipe_id', item.recipe_id)
+              .single();
+              
+            if (error) throw error;
+            return data.title || 'Unknown Recipe';
+          } catch (err) {
+            console.error('Error fetching recipe:', err);
+            return `Recipe ID: ${item.recipe_id}`;
+          }
+        }
+      },
+      { key: 'step_number', header: 'Step' },
+      { key: 'description', header: 'Description' },
+    ],
+    actions: [
+      {
+        text: 'Edit',
+        class: 'text-primary hover:text-sky-700 mr-3',
+        action: 'edit',
+        handler: 'showInstructionDetail'
+      },
+      {
+        text: 'Delete',
+        class: 'text-red-500 hover:text-red-700',
+        action: 'delete',
+        confirmMessage: 'Are you sure you want to delete this instruction?'
+      }
+    ],
+    orderBy: { column: 'recipe_id', ascending: true }
   }
 };

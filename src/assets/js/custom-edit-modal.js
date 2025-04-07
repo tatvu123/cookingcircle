@@ -535,3 +535,355 @@ async function editProductDetail(productId) {
     console.error('Error showing product edit form:', error);
   }
 }
+
+async function showInstructionDetail(instructionId) {
+  console.log("Show instruction detail called with ID:", instructionId);
+  try {
+    document.querySelectorAll('.instruction-detail-modal').forEach(modal => {
+      modal.remove();
+    });
+    
+    // Fetch the selected instruction
+    const { data: instruction, error } = await supabase
+      .from('instructions')
+      .select('*')
+      .eq('instruction_id', instructionId)
+      .single();
+    
+    if (error) throw error;
+    
+    // Fetch all instructions for this recipe
+    const { data: instructions, error: instructionsError } = await supabase
+      .from('instructions')
+      .select('*')
+      .eq('recipe_id', instruction.recipe_id)
+      .order('step_number', { ascending: true });
+    
+    if (instructionsError) throw instructionsError;
+    
+    // Get recipe name using foreign key resolver
+    const recipeTitle = await foreignKeyResolver.resolveRecipe(instruction.recipe_id);
+    
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.classList.add('fixed', 'inset-0', 'bg-black', 'bg-opacity-50', 'z-50', 'flex', 'items-center', 'justify-center', 'instruction-detail-modal');
+    
+    const modalContent = `
+      <div class="bg-white rounded-lg w-full max-w-3xl mx-4 overflow-hidden">
+        <div class="p-4 bg-gray-50 flex justify-between items-center">
+          <h3 class="text-lg font-medium">Recipe Instructions</h3>
+          <button class="close-modal-btn text-gray-400 hover:text-gray-600">
+            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <div class="mb-4">
+            <h2 class="text-xl font-bold">${recipeTitle}</h2>
+          </div>
+          
+          <div class="mt-6">
+            <h3 class="text-lg font-medium mb-3">Instructions</h3>
+            <div class="space-y-4">
+              ${instructions.map(instr => `
+                <div class="flex items-start ${instr.instruction_id === instructionId ? 'bg-blue-50 p-3 rounded-md' : ''}">
+                  <div class="flex-shrink-0 mr-4">
+                    <div class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center font-bold">
+                      ${instr.step_number}
+                    </div>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-gray-700">${instr.description}</p>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+          
+          <div class="flex justify-end gap-2 mt-6">
+            <button type="button" class="edit-instructions-btn py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-700">
+              Edit Instructions
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    modal.innerHTML = modalContent;
+    document.body.appendChild(modal);
+    
+    // Close modal on click
+    const closeBtn = modal.querySelector('.close-modal-btn');
+    closeBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+    
+    // Edit instructions button
+    const editBtn = modal.querySelector('.edit-instructions-btn');
+    editBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+      editInstructionSet(instruction.recipe_id);
+    });
+    
+  } catch (error) {
+    console.error('Error showing instruction details:', error);
+    alert(`Error showing instructions: ${error.message}`);
+  }
+}
+
+async function editInstructionSet(recipeId) {
+  console.log("Edit instruction set called for recipe ID:", recipeId);
+  try {
+    document.querySelectorAll('.instruction-detail-modal').forEach(modal => {
+      modal.remove();
+    });
+    
+    // Fetch all instructions for this recipe
+    const { data: instructions, error: instructionsError } = await supabase
+      .from('instructions')
+      .select('*')
+      .eq('recipe_id', recipeId)
+      .order('step_number', { ascending: true });
+    
+    if (instructionsError) throw instructionsError;
+    
+    // Get recipe name using foreign key resolver
+    const recipeTitle = await foreignKeyResolver.resolveRecipe(recipeId);
+    
+    // Create modal content with editable form
+    const modal = document.createElement('div');
+    modal.classList.add('fixed', 'inset-0', 'bg-black', 'bg-opacity-50', 'z-50', 'flex', 'items-center', 'justify-center', 'instruction-detail-modal');
+    
+    const modalContent = `
+      <div class="bg-white rounded-lg w-full max-w-3xl mx-4 flex flex-col h-[90vh]">
+        <div class="p-4 bg-gray-50 flex justify-between items-center sticky top-0 z-10 border-b border-gray-200">
+          <h3 class="text-lg font-medium">Edit Instructions for ${recipeTitle}</h3>
+          <button class="close-modal-btn text-gray-400 hover:text-gray-600">
+            <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        
+        <div class="overflow-y-auto custom-scroll flex-1 min-h-0">
+          <form id="edit-instructions-form" class="p-6">
+            <input type="hidden" name="recipe_id" value="${recipeId}">
+            
+            <div id="instructions-container" class="space-y-4 mb-4">
+              ${instructions.map((inst, index) => `
+                <div class="instruction-item border border-gray-200 p-4 rounded-md" data-id="${inst.instruction_id}">
+                  <div class="flex justify-between mb-2">
+                    <div class="flex items-center">
+                      <span class="mr-2 font-medium">Step</span>
+                      <input type="number" name="step_number_${inst.instruction_id}" class="w-16 rounded-md border border-gray-300 p-1" value="${inst.step_number}" min="1">
+                    </div>
+                    <button type="button" class="delete-step-btn text-red-500 hover:text-red-700" data-id="${inst.instruction_id}">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </div>
+                  <textarea name="description_${inst.instruction_id}" rows="3" class="w-full rounded-md border border-gray-300 p-2">${inst.description || ''}</textarea>
+                </div>
+              `).join('')}
+            </div>
+            
+            <button type="button" id="add-step-btn" class="flex items-center text-primary hover:text-primary-700 mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Step
+            </button>
+          </form>
+        </div>
+        
+        <div class="p-4 bg-gray-50 flex justify-end gap-2 border-t border-gray-200 sticky bottom-0">
+          <button type="button" class="cancel-btn py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="submit" id="save-changes-btn" form="edit-instructions-form" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-700">
+            Save Changes
+          </button>
+        </div>
+      </div>
+    `;
+    
+    modal.innerHTML = modalContent;
+    document.body.appendChild(modal);
+    
+    // Close modal handlers
+    const closeBtn = modal.querySelector('.close-modal-btn');
+    const cancelBtn = modal.querySelector('.cancel-btn');
+    
+    closeBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    // Close modal when clicking outside
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+    
+    // Add new step button
+    const addStepBtn = modal.querySelector('#add-step-btn');
+    const instructionsContainer = modal.querySelector('#instructions-container');
+    let newStepCounter = 0;
+    
+    addStepBtn.addEventListener('click', () => {
+      const nextStepNumber = instructions.length > 0 ? 
+        Math.max(...instructions.map(i => i.step_number)) + 1 : 1;
+      const newStepId = `new-${newStepCounter++}`;
+      
+      const newStepHTML = `
+        <div class="instruction-item border border-gray-200 p-4 rounded-md bg-green-50" data-id="${newStepId}">
+          <div class="flex justify-between mb-2">
+            <div class="flex items-center">
+              <span class="mr-2 font-medium">Step</span>
+              <input type="number" name="step_number_${newStepId}" class="w-16 rounded-md border border-gray-300 p-1" value="${nextStepNumber}" min="1">
+            </div>
+            <button type="button" class="delete-step-btn text-red-500 hover:text-red-700" data-id="${newStepId}">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+          <textarea name="description_${newStepId}" rows="3" class="w-full rounded-md border border-gray-300 p-2" placeholder="Enter step description..."></textarea>
+        </div>
+      `;
+      
+      instructionsContainer.insertAdjacentHTML('beforeend', newStepHTML);
+      
+      // Add delete event listener for the new step
+      const newDeleteBtn = instructionsContainer.querySelector(`[data-id="${newStepId}"] .delete-step-btn`);
+      newDeleteBtn.addEventListener('click', function() {
+        const item = instructionsContainer.querySelector(`[data-id="${newStepId}"]`);
+        item.remove();
+      });
+    });
+    
+    // Delete step button handlers
+    const deleteStepBtns = modal.querySelectorAll('.delete-step-btn');
+    deleteStepBtns.forEach(btn => {
+      btn.addEventListener('click', function() {
+        const stepId = this.getAttribute('data-id');
+        const item = instructionsContainer.querySelector(`[data-id="${stepId}"]`);
+        item.remove();
+      });
+    });
+    
+    // Handle form submission
+    const form = modal.querySelector('#edit-instructions-form');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      try {
+        const formData = new FormData(form);
+        const recipeId = formData.get('recipe_id');
+        
+        // Get all instruction items
+        const instructionItems = modal.querySelectorAll('.instruction-item');
+        
+        // Prepare arrays for updates, inserts and deletes
+        const toUpdate = [];
+        const toInsert = [];
+        const existingIds = new Set();
+        
+        // Process each instruction item
+        instructionItems.forEach(item => {
+          const itemId = item.getAttribute('data-id');
+          const stepNumber = parseInt(formData.get(`step_number_${itemId}`), 10);
+          const description = formData.get(`description_${itemId}`);
+          
+          if (itemId.startsWith('new-')) {
+            // This is a new instruction
+            toInsert.push({
+              recipe_id: recipeId,
+              step_number: stepNumber,
+              description: description
+            });
+          } else {
+            // This is an existing instruction
+            existingIds.add(itemId);
+            toUpdate.push({
+              instruction_id: itemId,
+              recipe_id: recipeId,
+              step_number: stepNumber,
+              description: description
+            });
+          }
+        });
+        
+        // Find instructions to delete (those in original list but not in the form)
+        const toDelete = instructions
+          .filter(inst => !existingIds.has(inst.instruction_id))
+          .map(inst => inst.instruction_id);
+        
+        // Execute database operations
+        const promises = [];
+        
+        if (toUpdate.length > 0) {
+          promises.push(supabase.from('instructions').upsert(toUpdate));
+        }
+        
+        if (toInsert.length > 0) {
+          promises.push(supabase.from('instructions').insert(toInsert));
+        }
+        
+        if (toDelete.length > 0) {
+          promises.push(supabase.from('instructions').delete().in('instruction_id', toDelete));
+        }
+        
+        const results = await Promise.all(promises);
+        
+        // Check for errors
+        for (const result of results) {
+          if (result.error) throw result.error;
+        }
+        
+        // Close modal
+        document.body.removeChild(modal);
+        
+        // Show success message
+        const notification = document.createElement('div');
+        notification.className = 'fixed bottom-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50 notification-toast';
+        notification.innerHTML = `
+          <div class="flex items-center">
+            <div class="py-1"><svg class="fill-current h-6 w-6 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM6.7 9.29L9 11.6l4.3-4.3 1.4 1.42L9 14.4l-3.7-3.7 1.4-1.42z"/></svg></div>
+            <div>
+              <p class="text-sm">Recipe instructions updated successfully!</p>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(notification);
+        
+        // Refresh the page after a short delay
+        setTimeout(() => {
+          notification.remove();
+          window.location.reload();
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Error updating instructions:', error);
+        alert(`Failed to update instructions: ${error.message}`);
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error showing instruction edit form:', error);
+    alert(`Error showing instruction editor: ${error.message}`);
+  }
+}

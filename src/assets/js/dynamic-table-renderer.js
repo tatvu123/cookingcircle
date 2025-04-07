@@ -38,6 +38,7 @@ class DynamicTableRenderer {
     if (this.eventListenersAttached) return;
     this.eventListenersAttached = true;
     
+    // Existing click handler for edit/delete
     document.addEventListener('click', async (e) => {
       // If the event has already been handled, skip processing
       if (e.recipeActionHandled) return;
@@ -142,6 +143,38 @@ class DynamicTableRenderer {
           break;
       }
     }, true); // Using capture phase to ensure this runs before other handlers
+    
+    // New event listener for add buttons
+    document.addEventListener('click', async (e) => {
+      if (!e.target.closest('.add-item-btn')) return;
+      
+      const addButton = e.target.closest('.add-item-btn');
+      const tableType = addButton.dataset.tableType;
+      
+      if (!tableType) return;
+      
+      // Use custom add modals for recipes and products
+      if (tableType === 'recipes' && typeof window.addRecipe === 'function') {
+        window.addRecipe();
+        return;
+      }
+      
+      if (tableType === 'products' && typeof window.addProduct === 'function') {
+        window.addProduct();
+        return;
+      }
+      
+      // Fall back to generic add modal for other tables
+      const config = this.tableConfigs[tableType];
+      if (!config) return;
+      
+      try {
+        await this.showGenericAddModal(config.tableName, config.idField, config.columns);
+      } catch (error) {
+        console.error(`Error adding to ${tableType}:`, error);
+        alert(`Could not open add form: ${error.message}`);
+      }
+    });
   }
   
   async fetchItems(tableName, orderBy = null) {
@@ -192,11 +225,49 @@ class DynamicTableRenderer {
     }
   }
   
+  async insertItem(tableName, item) {
+    try {
+      const { data, error } = await supabase
+        .from(tableName)
+        .insert(item);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error(`Error inserting item into ${tableName}:`, error);
+      return false;
+    }
+  }
 
   async renderTable(container, config) {
     // Remove overflow class first to avoid stacking
     container.classList.remove('overflow-auto');
     container.classList.add('overflow-auto');
+    
+    // Find the card header to add our button
+    const cardHeader = container.closest('.card')?.querySelector('.card-header');
+    if (cardHeader) {
+      // Check if we already added a button
+      if (!cardHeader.querySelector('.add-item-btn')) {
+        const addButton = document.createElement('button');
+        addButton.className = 'add-item-btn py-1 px-3 inline-flex items-center gap-1 text-sm font-medium bg-primary text-white rounded-md ml-auto';
+        addButton.innerHTML = `
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-plus">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Add New
+        `;
+        addButton.dataset.tableType = config.tableName;
+        
+        // Make the header flex to position the button on the right
+        cardHeader.style.display = 'flex';
+        cardHeader.style.justifyContent = 'space-between';
+        cardHeader.style.alignItems = 'center';
+        
+        cardHeader.appendChild(addButton);
+      }
+    }
     
     // IMPORTANT: Completely remove all child elements first
     while (container.firstChild) {
@@ -533,6 +604,193 @@ class DynamicTableRenderer {
       alert(`Could not display edit form: ${error.message}`);
     }
   }
+
+  async showGenericAddModal(tableName, idField, columns) {
+    try {
+      // Remove any existing modals
+      document.querySelectorAll('.generic-add-modal').forEach(modal => {
+        modal.remove();
+      });
+      
+      // Create modal container
+      const modal = document.createElement('div');
+      modal.classList.add('fixed', 'inset-0', 'bg-black', 'bg-opacity-50', 'z-50', 'flex', 'items-center', 'justify-center', 'generic-add-modal');
+      
+      // Build form fields based on columns configuration
+      let formFields = '';
+      
+      columns.forEach(column => {
+        // Skip primary key field as it's usually auto-generated
+        if (column.key === idField) return;
+        
+        // Handle different column types appropriately
+        if (column.type === 'boolean') {
+          // Checkbox for boolean values
+          formFields += `
+            <div class="mb-4">
+              <label class="inline-flex items-center">
+                <input type="checkbox" name="${column.key}" class="rounded border-gray-300">
+                <span class="ml-2 text-sm font-medium text-gray-700">${column.header}</span>
+              </label>
+            </div>
+          `;
+        } else if (column.type === 'number') {
+          // Number input
+          formFields += `
+            <div class="mb-4">
+              <label for="${column.key}" class="block text-sm font-medium text-gray-700 mb-1">${column.header}</label>
+              <input type="number" id="${column.key}" name="${column.key}" class="w-full rounded-md border border-gray-300 p-2" value="0">
+            </div>
+          `;
+        } else if (column.type === 'array') {
+          // Handle arrays (like tags) with comma-separated input
+          formFields += `
+            <div class="mb-4">
+              <label for="${column.key}" class="block text-sm font-medium text-gray-700 mb-1">${column.header} (comma separated)</label>
+              <input type="text" id="${column.key}" name="${column.key}" class="w-full rounded-md border border-gray-300 p-2">
+            </div>
+          `;
+        } else if (column.type === 'text' || column.key.includes('description')) {
+          // Textarea for potentially long text
+          formFields += `
+            <div class="mb-4">
+              <label for="${column.key}" class="block text-sm font-medium text-gray-700 mb-1">${column.header}</label>
+              <textarea id="${column.key}" name="${column.key}" rows="4" class="w-full rounded-md border border-gray-300 p-2"></textarea>
+            </div>
+          `;
+        } else {
+          // Default to text input
+          formFields += `
+            <div class="mb-4">
+              <label for="${column.key}" class="block text-sm font-medium text-gray-700 mb-1">${column.header}</label>
+              <input type="text" id="${column.key}" name="${column.key}" class="w-full rounded-md border border-gray-300 p-2">
+            </div>
+          `;
+        }
+      });
+      
+      // Create modal content with scrolling support
+      const modalContent = `
+        <div class="bg-white rounded-lg w-full max-w-3xl mx-4 flex flex-col h-[90vh]">
+          <div class="p-4 bg-gray-50 flex justify-between items-center sticky top-0 z-10 border-b border-gray-200">
+            <h3 class="text-lg font-medium">Add New ${tableName.charAt(0).toUpperCase() + tableName.slice(1).replace(/s$/, '')}</h3>
+            <button class="close-modal-btn text-gray-400 hover:text-gray-600">
+              <svg class="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <div class="overflow-y-auto custom-scroll flex-1 min-h-0">
+            <form id="add-form" class="p-6">
+              ${formFields}
+            </form>
+          </div>
+          <div class="p-4 bg-gray-50 flex justify-end gap-2 border-t border-gray-200 sticky bottom-0">
+            <button type="button" class="cancel-btn py-2 px-4 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              Cancel
+            </button>
+            <button type="submit" id="save-new-btn" class="py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-700">
+              Save
+            </button>
+          </div>
+        </div>
+      `;
+      
+      modal.innerHTML = modalContent;
+      document.body.appendChild(modal);
+      
+      // Add event listeners for closing modal
+      const closeBtn = modal.querySelector('.close-modal-btn');
+      const cancelBtn = modal.querySelector('.cancel-btn');
+      const form = modal.querySelector('#add-form');
+      const saveBtn = modal.querySelector('#save-new-btn');
+      
+      closeBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+      
+      cancelBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+      
+      // Close modal when clicking outside
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+        }
+      });
+      
+      // Connect save button to form submission
+      saveBtn.addEventListener('click', () => {
+        form.dispatchEvent(new Event('submit'));
+      });
+      
+      // Handle form submission
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        try {
+          const formData = new FormData(form);
+          const newItem = {};
+          
+          // Process form data
+          columns.forEach(column => {
+            if (column.key === idField) return; // Skip ID field
+            
+            let value = formData.get(column.key);
+            
+            // Handle different data types
+            if (column.type === 'boolean') {
+              value = !!formData.get(column.key); // Convert to boolean
+            } else if (column.type === 'number' || typeof column.fallback === 'number') {
+              value = value ? Number(value) : 0;
+            } else if (column.type === 'array') {
+              value = value ? value.split(',').map(item => item.trim()).filter(item => item) : [];
+            } else if (value === '') {
+              // Handle empty values with fallbacks if defined
+              value = column.fallback !== undefined ? column.fallback : null;
+            }
+            
+            newItem[column.key] = value;
+          });
+          
+          // Insert item in database
+          const success = await this.insertItem(tableName, newItem);
+          
+          if (!success) throw new Error('Failed to insert item');
+          
+          // Close modal
+          document.body.removeChild(modal);
+          
+          // Show success message
+          const notification = document.createElement('div');
+          notification.className = 'fixed bottom-4 right-4 bg-green-100 border-l-4 border-green-500 text-green-700 p-4 rounded shadow-md z-50 notification-toast';
+          notification.innerHTML = `
+            <div class="flex items-center">
+              <div class="py-1"><svg class="fill-current h-6 w-6 text-green-500 mr-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M2.93 17.07A10 10 0 1 1 17.07 2.93 10 10 0 0 1 2.93 17.07zm12.73-1.41A8 8 0 1 0 4.34 4.34a8 8 0 0 0 11.32 11.32zM6.7 9.29L9 11.6l4.3-4.3 1.4 1.42L9 14.4l-3.7-3.7 1.4-1.42z"/></svg></div>
+              <div>
+                <p class="text-sm">Item added successfully!</p>
+              </div>
+            </div>
+          `;
+          document.body.appendChild(notification);
+          
+          setTimeout(() => {
+            notification.remove();
+            // Refresh page to update data
+            window.location.reload();
+          }, 1500);
+        } catch (error) {
+          console.error('Error adding item:', error);
+          alert(`Failed to add item: ${error.message}`);
+        }
+      });
+    } catch (error) {
+      console.error('Error showing add modal:', error);
+      alert(`Could not display add form: ${error.message}`);
+    }
+  }
 }
+
 
 const tableRenderer = new DynamicTableRenderer();
