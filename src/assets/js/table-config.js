@@ -162,5 +162,88 @@ const tableConfigurations = {
       }
     ],
     orderBy: { column: 'recipe_id', ascending: true }
+  },
+
+  ingredients: {
+    tableName: 'ingredients',
+    idField: 'ingredient_id',
+    title: 'Ingredients',
+    columns: [
+      {
+        key: 'name',
+        header: 'Ingredient Name',
+        render: (item) => {
+          return `
+            <div class="flex items-center">
+              ${item.ingredient_image_url ? `
+                <div class="flex-shrink-0 h-10 w-10 mr-3">
+                  <img class="h-10 w-10 rounded-md object-cover" src="${item.ingredient_image_url}" alt="${item.name || 'Ingredient'}">
+                </div>
+              ` : ''}
+              <div>
+                ${item.name || 'Unnamed Ingredient'}
+                ${item.quantity && item.unit ? `<p class="text-xs text-gray-500">${item.quantity} ${item.unit}</p>` : ''}
+              </div>
+            </div>
+          `;
+        }
+      },
+      {
+        key: 'recipe_id',
+        header: 'Recipe',
+        render: async (item) => {
+          if (!item.recipe_id) return 'N/A';
+          try {
+            // Use the foreign key resolver if available
+            if (typeof window.foreignKeyResolver !== 'undefined' && typeof window.foreignKeyResolver.resolveRecipe === 'function') {
+              return await window.foreignKeyResolver.resolveRecipe(item.recipe_id);
+            }
+            
+            // Fallback direct query
+            const { data, error } = await supabase
+              .from('recipes')
+              .select('title')
+              .eq('recipe_id', item.recipe_id)
+              .single();
+              
+            if (error) throw error;
+            return data?.title || 'Unknown Recipe';
+          } catch (err) {
+            console.error('Error fetching recipe:', err);
+            return `Recipe ID: ${item.recipe_id.substring(0, 8)}...`;
+          }
+        }
+      },
+      {
+        key: 'price',
+        header: 'Price',
+        render: (item) => item.price ? `$${parseFloat(item.price).toFixed(2)}` : '$0.00'
+      },
+      { 
+        key: 'quantity_unit', 
+        header: 'Quantity/Unit',
+        render: (item) => `${item.quantity || ''} ${item.unit || ''}`.trim() || 'N/A'
+      },
+      { 
+        key: 'notes', 
+        header: 'Notes',
+        render: (item) => item.notes ? (item.notes.length > 30 ? item.notes.substring(0, 30) + '...' : item.notes) : ''
+      }
+    ],
+    actions: [
+      {
+        text: 'Edit',
+        class: 'text-primary hover:text-sky-700 mr-3',
+        action: 'edit',
+        handler: 'editIngredientDetail'
+      },
+      {
+        text: 'Delete',
+        class: 'text-red-500 hover:text-red-700',
+        action: 'delete',
+        confirmMessage: 'Are you sure you want to delete this ingredient?'
+      }
+    ],
+    orderBy: { column: 'name', ascending: true }
   }
 };

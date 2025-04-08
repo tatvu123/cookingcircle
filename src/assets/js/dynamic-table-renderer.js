@@ -153,7 +153,7 @@ class DynamicTableRenderer {
       
       if (!tableType) return;
       
-      // Use custom add modals for recipes and products
+      // Use custom add modals for recipes, products and ingredients
       if (tableType === 'recipes' && typeof window.addRecipe === 'function') {
         window.addRecipe();
         return;
@@ -161,6 +161,11 @@ class DynamicTableRenderer {
       
       if (tableType === 'products' && typeof window.addProduct === 'function') {
         window.addProduct();
+        return;
+      }
+      
+      if (tableType === 'ingredients' && typeof window.addIngredient === 'function') {
+        window.addIngredient();
         return;
       }
       
